@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MahaVitaran Bill System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background-color: #e9ecef; margin: 0; padding: 20px; }
+        .container { max-width: 950px; margin: 0 auto; }
+        
+        /* Search & Payment Cards */
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-title { margin-top: 0; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px; font-weight: bold; }
+        
+        select, input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; margin-bottom: 10px; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; width: 100%; }
+        .btn-primary { background: #d32f2f; color: white; }
+        .btn-primary:hover { background: #b71c1c; }
+        .btn-pay { background: #1e1b4b; color: white; font-size: 16px; padding: 12px; }
+        .btn-pay:hover { background: #312e81; }
+        .btn-pay:disabled { background: #6b7280; cursor: not-allowed; }
+
+        .flex-row { display: flex; gap: 15px; align-items: flex-end; }
+        .flex-row > div { flex: 1; }
+
+        /* ==========================================
+           MAHAVITARAN REAL BILL LAYOUT
+           ========================================== */
+        .bill-paper { background: #fff; border: 1px solid #333; padding: 0; display: none; position: relative; font-size: 12px; color: #000; }
+        
+        /* Header */
+        .b-header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding: 15px; }
+        .b-logo h2 { margin: 0; color: #d32f2f; font-size: 22px; }
+        .b-logo p { margin: 2px 0; font-size: 10px; }
+        .b-type { text-align: right; }
+        .b-type h3 { margin: 0; font-size: 14px; }
+        .b-type p { margin: 2px 0; font-size: 11px; }
+
+        /* 4 Box Grid */
+        .b-4-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; border-bottom: 1px solid #333; }
+        .b-box { padding: 10px; text-align: center; border-right: 1px solid #333; }
+        .b-box:last-child { border-right: none; }
+        .b-box .lbl { font-size: 10px; color: #555; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .b-box .val { font-size: 16px; font-weight: bold; }
+        .b-box.green { background: #e6f4ea; }
+        .b-box.yellow { background: #fef7e0; }
+        .b-box .green-text { color: #2e7d32; }
+        .b-box .red-text { color: #c62828; }
+        .b-box .sub-lbl { font-size: 9px; color: #666; display: block; margin-top: 5px; }
+
+        /* Info Grid */
+        .b-info-grid { display: grid; grid-template-columns: 1.5fr 1fr; border-bottom: 1px solid #333; }
+        .b-cell { padding: 10px; border-right: 1px solid #333; }
+        .b-cell:last-child { border-right: none; }
+        .b-row-data { margin-bottom: 5px; display: flex; justify-content: space-between;}
+        .b-row-data span.lbl { font-weight: bold; font-size: 10px; color: #555; }
+        .b-row-data span.val { font-weight: bold; font-size: 12px; }
+
+        /* Middle Section (QR & Meter) */
+        .b-middle-grid { display: grid; grid-template-columns: 1fr 2.5fr; border-bottom: 1px solid #333; }
+        .b-qr { padding: 10px; text-align: center; border-right: 1px solid #333; }
+        .b-qr-box { width: 100px; height: 100px; border: 1px dashed #777; margin: 0 auto; background: repeating-linear-gradient(45deg, #ddd, #ddd 2px, #fff 2px, #fff 4px); }
+        .b-qr p { font-size: 9px; margin-top: 5px; }
+        
+        .b-table { width: 100%; border-collapse: collapse; text-align: center; height: 100%; }
+        .b-table th, .b-table td { border: 1px solid #333; padding: 8px; font-size: 11px; }
+        .b-table th { background: #f2f2f2; }
+
+        /* Graph */
+        .b-graph-section { border-bottom: 1px solid #333; padding: 10px; height: 350px; }
+        .graph-container { width: 100%; height: 100%; position: relative; } 
+
+        /* Charges & History */
+        .b-bottom-grid { display: grid; grid-template-columns: 1.2fr 1fr; border-bottom: 1px solid #333; }
+        .b-charges-table { width: 100%; border-collapse: collapse; }
+        .b-charges-table td { border: 1px solid #333; padding: 8px; font-size: 11px; }
+        .b-charges-table td.amt { text-align: right; }
+        .b-charges-table tr.total td { font-weight: bold; font-size: 13px; background: #f9f9f9; }
+        
+        .b-history-table { width: 100%; border-collapse: collapse; }
+        .b-history-table th, .b-history-table td { border: 1px solid #333; padding: 8px; font-size: 11px; text-align: center;}
+        .b-history-table th { background: #f2f2f2; }
+
+        /* Payment Messages */
+        #paymentSuccessMsg { display: none; background-color: #d1fae5; color: #065f46; padding: 15px; border-radius: 5px; margin-top: 15px; font-weight: bold; text-align: center; border: 1px solid #10b981; font-size: 15px;}
+        #lateFeeWarning { display: none; background-color: #fee2e2; color: #991b1b; padding: 10px; border-radius: 4px; border: 1px solid #ef4444; margin-top: 10px; font-weight: bold; text-align: center; }
+
+        /* Print */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .no-print { display: none !important; }
+            .bill-paper { border: 1px solid #000; display: block !important; }
+            .container { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- SEARCH SECTION -->
+    <div class="card no-print">
+        <h3 class="card-title">🔍 Check / Generate Bill</h3>
+        <div class="flex-row">
+            <div>
+                <label>Year</label>
+                <select id="searchYear" onchange="updateMonths('searchYear', 'searchMonth')">
+                    <option value="">Select Year</option>
+                    <!-- Years generated dynamically -->
+                </select>
+            </div>
+            <div>
+                <label>Month</label>
+                <select id="searchMonth">
+                    <option value="">Select Year First</option>
+                </select>
+            </div>
+            <div>
+                <button class="btn-primary" onclick="generateAndDisplayBill()">Search & Display</button>
+            </div>
+        </div>
+        <p id="searchMsg" style="font-weight: bold; text-align: center; margin: 10px 0 0 0;"></p>
+    </div>
+
+    <!-- BILL PAPER DISPLAY -->
+    <div id="billPaper" class="bill-paper">
+        
+        <div style="text-align: right; padding: 10px; border-bottom: 1px solid #333; background: #eee;" class="no-print">
+            <button onclick="window.print()" style="width: auto; background: #333; padding: 5px 15px;">🖨️ Print / Save PDF</button>
+        </div>
+
+        <!-- Header -->
+        <div class="b-header">
+            <div class="b-logo">
+                <h2>महावितरण (MahaVitaran)</h2>
+                <p>Maharashtra State Electricity Distribution Co. Ltd.</p>
+            </div>
+            <div class="b-type">
+                <h3>बीज पुरवठा देयक</h3>
+                <p>BILL OF SUPPLY FOR THE MONTH OF - <span id="dispMonthYear">-</span></p>
+                <p>GSTIN: 27AAECM2933K1ZB</p>
+            </div>
+        </div>
+
+        <!-- 4 Box Grid -->
+        <div class="b-4-grid">
+            <div class="b-box">
+                <span class="lbl">Month</span>
+                <span class="val" id="dispMonth">-</span>
+                <span class="sub-lbl">Billing Month</span>
+            </div>
+            <div class="b-box">
+                <span class="lbl">Due Date</span>
+                <span class="val" id="dispDueDate">-</span>
+                <span class="sub-lbl">Last date to pay</span>
+            </div>
+            <div class="b-box green">
+                <span class="lbl">Due Amount</span>
+                <span class="val green-text" id="dispAmount">₹0.00</span>
+                <span class="sub-lbl">If paid on/before due date</span>
+            </div>
+            <div class="b-box yellow">
+                <span class="lbl">After Due Date</span>
+                <span class="val red-text" id="dispAfterDue">₹0.00</span>
+                <span class="sub-lbl">If paid after due date (with penalty)</span>
+            </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="b-info-grid">
+            <div class="b-cell">
+                <div class="b-row-data"><span class="lbl">ग्राहक क्रमांक (Consumer No.)</span> <span class="val">463020072318</span></div>
+                <div class="b-row-data"><span class="lbl">ग्राहकाचे नाव (Name)</span> <span class="val">SMT. TARABAI WAMAN BHANARKAR</span></div>
+                <div class="b-row-data"><span class="lbl">पत्ता (Address)</span> <span class="val">BHANARKAR BUNGALOW, AR-4291, PN 8 Bramhapuri 442402</span></div>
+            </div>
+            <div class="b-cell">
+                <div class="b-row-data"><span class="lbl">देयक क्रमांक (Bill No.)</span> <span class="val" id="dispBillNo">-</span></div>
+                <div class="b-row-data"><span class="lbl">देयक दिनांक (Bill Date)</span> <span class="val" id="dispBillDate">-</span></div>
+                <div class="b-row-data"><span class="lbl">स्थिती (Status)</span> <span class="val" id="dispStatus" style="color:red;">Unpaid</span></div>
+            </div>
+        </div>
+
+        <!-- Meter Table & QR -->
+        <div class="b-middle-grid">
+            <div class="b-qr">
+                <div class="b-qr-box"></div>
+                <p>Scan QR Code for Payment</p>
+            </div>
+            <div>
+                <table class="b-table">
+                    <thead>
+                        <tr>
+                            <th>मीटर क्रमांक<br>Meter No.</th>
+                            <th>मागील रिडिंग<br>Prev. Read</th>
+                            <th>चालू रिडिंग<br>Curr. Read</th>
+                            <th>गुणक<br>Multiplier</th>
+                            <th>वापरलेली युनिट<br>Units Used</th>
+                            <th>दर<br>Rate (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>4331BRAMHAPURI</td>
+                            <td id="dispPrevRead">-</td>
+                            <td id="dispCurrRead">-</td>
+                            <td>1.00</td>
+                            <td id="dispUnits">-</td>
+                            <td>1.50</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Horizontal Graph (0, 50, 100, 150) -->
+        <div class="b-graph-section">
+            <div class="graph-container">
+                <canvas id="billGraph"></canvas>
+            </div>
+        </div>
+
+        <!-- Charges & Payment History -->
+        <div class="b-bottom-grid">
+            <div style="border-right: 1px solid #333;">
+                <table class="b-charges-table">
+                    <tr><td>स्थिर आकार (Fixed Charge)</td><td class="amt">150.00</td></tr>
+                    <tr><td>वीज आकार (Energy Charge)</td><td class="amt" id="dispEnergyChg">-</td></tr>
+                    <tr><td>वहन आकार @ 1.60 Rs/U (Vehicle Charge)</td><td class="amt" id="dispVehicleChg">-</td></tr>
+                    <tr><td>इंधन समायोजन आकार (Fuel Surcharge)</td><td class="amt">74.25</td></tr>
+                    <tr><td>वीज शुल्क 16.00% (Electricity Duty)</td><td class="amt" id="dispElecDuty">-</td></tr>
+                    <tr><td>इतर आकार (Other Charges)</td><td class="amt">0.00</td></tr>
+                    <tr class="total"><td>पूर्णांक देयक (Total Amount)</td><td class="amt" id="dispTotalAmount">₹0.00</td></tr>
+                </table>
+            </div>
+            <div>
+                <table class="b-history-table">
+                    <thead>
+                        <tr><th>PAYMENT HISTORY (RECEIPT DATE)</th><th>PAID (₹)</th></tr>
+                    </thead>
+                    <tbody id="paymentHistoryBody">
+                        <!-- History will load here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PAYMENT SECTION -->
+    <div class="card no-print">
+        <h3 class="card-title">💳 Make a Payment</h3>
+        <div class="flex-row">
+            <div>
+                <label>Year</label>
+                <select id="payYear" onchange="updateMonths('payYear', 'payMonth')">
+                    <option value="">Select Year</option>
+                    <!-- Years generated dynamically -->
+                </select>
+            </div>
+            <div>
+                <label>Month</label>
+                <select id="payMonth" onchange="fetchPaymentDetails()">
+                    <option value="">Select Year First</option>
+                </select>
+            </div>
+            <div>
+                <label>Amount to Pay (₹)</label>
+                <input type="number" id="payAmount" value="0.00" readonly style="background: #e9ecef; font-weight: bold; color: #d32f2f;">
+            </div>
+            <div>
+                <button class="btn-pay" id="payBtn" onclick="processPayment()">Pay Now</button>
+            </div>
+        </div>
+        
+        <div id="lateFeeWarning"></div>
+        <div id="paymentSuccessMsg"></div>
+        <p id="payStatusMsg" style="font-weight: bold; text-align: center; margin-top: 10px;"></p>
+    </div>
+</div>
+
+<script>
+    Chart.register(ChartDataLabels);
+
+    // Get current date
+    const currentDate = new Date();
+    const todayStr = currentDate.toISOString().split('T')[0];
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 1-12
+
+    // Dynamically populate Years (Last 5 years to Current Year)
+    function populateYears() {
+        const searchYearSel = document.getElementById('searchYear');
+        const payYearSel = document.getElementById('payYear');
+        let options = '<option value="">Select Year</option>';
+        
+        for(let y = currentYear; y >= currentYear - 5; y--) {
+            options += `<option value="${y}">${y}</option>`;
+        }
+        
+        searchYearSel.innerHTML = options;
+        payYearSel.innerHTML = options;
+    }
+    populateYears();
+
+    // Dynamically populate Months based on selected Year (No future months)
+    function updateMonths(yearId, monthId) {
+        const yearVal = document.getElementById(yearId).value;
+        const monthSel = document.getElementById(monthId);
+        
+        monthSel.innerHTML = '<option value="">Select Month</option>';
+        if(!yearVal) return;
+
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        let maxMonth = 12;
+
+        // Agar current year select kiya hai, toh sirf current month tak ka option dikhao
+        if (parseInt(yearVal) === currentYear) {
+            maxMonth = currentMonth; 
+        }
+
+        for(let i = 1; i <= maxMonth; i++) {
+            let val = i < 10 ? "0" + i : i.toString();
+            monthSel.innerHTML += `<option value="${val}">${months[i-1]}</option>`;
+        }
+        
+        // Payment dropdown me select karne par amount update ho
+        if (monthId === 'payMonth' && monthSel.value !== "") {
+            fetchPaymentDetails();
+        }
+    }
+
+    // Generate mock data for graph (past 11 months)
+    function generateMockData() {
+        let data = [];
+        for (let i = 11; i >= 0; i--) {
+            let d = new Date(currentYear, currentMonth - 1 - i, 1);
+            let m = (d.getMonth() + 1).toString().padStart(2, '0');
+            let y = d.getFullYear().toString();
+            
+            data.push({
+                month: m,
+                year: y,
+                billNo: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+                billDate: `${y}-${m}-15`,
+                dueDate: `${y}-${m}-28`,
+                payDate: (i > 0) ? `${y}-${m}-20` : "", 
+                units: Math.floor(Math.random() * 100) + 50,
+                total: Math.floor(Math.random() * 201) + 1000,
+                history: []
+            });
+        }
+        return data;
+    }
+
+    let billsData = JSON.parse(localStorage.getItem('mahaStrictPastBills')) || generateMockData();
+    if(!localStorage.getItem('mahaStrictPastBills')) {
+        localStorage.setItem('mahaStrictPastBills', JSON.stringify(billsData));
+    }
+
+    let graphChart; 
+    const monthMarathi = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+
+    function getMonthName(monthStr) {
+        const m = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return m[parseInt(monthStr) - 1];
+    }
+
+    function formatDate(dateStr) {
+        if(!dateStr) return "-";
+        const parts = dateStr.split('-');
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    window.onload = function() { renderGraph(); };
+
+    // ==========================================
+    // 1. Generate Exact Bill
+    // ==========================================
+    function generateAndDisplayBill() {
+        const month = document.getElementById('searchMonth').value;
+        const year = document.getElementById('searchYear').value;
+        const searchMsg = document.getElementById('searchMsg');
+        document.getElementById('paymentSuccessMsg').style.display = 'none';
+
+        if(!month || !year) { alert("कृपया साल और महीना दोनों चुनें!"); return; }
+
+        let foundBill = billsData.find(b => b.month === month && b.year === year);
+
+        if (foundBill) {
+            searchMsg.style.color = "green";
+            searchMsg.innerText = `✅ पुराना बिल मिल गया! (Status: ${foundBill.payDate ? 'Paid' : 'Unpaid'})`;
+        } else {
+            // Generate NEW bill
+            const generatedTotalAmount = Math.floor(Math.random() * 201) + 1000; 
+            const randomUnits = Math.floor(Math.random() * 100) + 50; 
+            
+            foundBill = {
+                month: month, 
+                year: year,
+                billNo: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+                billDate: `${year}-${month}-15`,
+                dueDate: `${year}-${month}-28`, 
+                payDate: "", 
+                units: randomUnits,
+                total: generatedTotalAmount,
+                history: []
+            };
+
+            billsData.push(foundBill);
+            localStorage.setItem('mahaStrictPastBills', JSON.stringify(billsData));
+            
+            searchMsg.style.color = "blue";
+            searchMsg.innerText = `ℹ️ नया बिल जनरेट हुआ! (Units: ${randomUnits})`;
+        }
+
+        populateBillUI(foundBill);
+        document.getElementById('billPaper').style.display = 'block';
+        document.getElementById('billPaper').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ==========================================
+    // 2. Populate Bill UI
+    // ==========================================
+    function populateBillUI(bill) {
+        const displayMonthYear = `${getMonthName(bill.month)} ${bill.year}`;
+        const totalAmt = parseFloat(bill.total).toFixed(2);
+        const afterDueAmt = (parseFloat(bill.total) + 20).toFixed(2); 
+        const units = bill.units;
+        
+        const energyChg = (units * 1.50).toFixed(2);
+        const vehicleChg = (units * 1.60).toFixed(2);
+        const elecDuty = (parseFloat(energyChg) * 0.16).toFixed(2); 
+
+        document.getElementById('dispMonth').innerText = displayMonthYear;
+        document.getElementById('dispDueDate').innerText = formatDate(bill.dueDate);
+        document.getElementById('dispAmount').innerText = `₹${totalAmt}`;
+        document.getElementById('dispAfterDue').innerText = `₹${afterDueAmt}`;
+        
+        document.getElementById('dispMonthYear').innerText = displayMonthYear;
+        document.getElementById('dispBillDate').innerText = formatDate(bill.billDate);
+        document.getElementById('dispBillNo').innerText = bill.billNo;
+        document.getElementById('dispStatus').innerText = bill.payDate ? "Paid" : "Unpaid";
+        document.getElementById('dispStatus').style.color = bill.payDate ? "green" : "red";
+
+        const prevRead = (5633.01).toFixed(2);
+        const currRead = (parseFloat(prevRead) + units).toFixed(2);
+        document.getElementById('dispPrevRead').innerText = prevRead;
+        document.getElementById('dispCurrRead').innerText = currRead;
+        document.getElementById('dispUnits').innerText = units;
+        
+        document.getElementById('dispEnergyChg').innerText = energyChg;
+        document.getElementById('dispVehicleChg').innerText = vehicleChg;
+        document.getElementById('dispElecDuty').innerText = elecDuty;
+        document.getElementById('dispTotalAmount').innerText = `₹${totalAmt}`;
+
+        const historyBody = document.getElementById('paymentHistoryBody');
+        historyBody.innerHTML = '';
+        if (bill.history && bill.history.length > 0) {
+            bill.history.forEach(h => {
+                historyBody.innerHTML += `<tr><td>${formatDate(h.date)}</td><td>₹${h.amount}</td></tr>`;
+            });
+        } else {
+            historyBody.innerHTML = `<tr><td colspan="2" style="color:gray;">No past payments</td></tr>`;
+        }
+
+        renderGraph();
+    }
+
+    // ==========================================
+    // 3. Graph (0, 50, 100, 150)
+    // ==========================================
+    function renderGraph() {
+        let sortedData = [...billsData].sort((a, b) => (a.year + a.month) - (b.year + b.month));
+        const recentBills = sortedData.slice(-11);
+
+        const labels = recentBills.map(b => `${monthMarathi[parseInt(b.month) - 1]}-${b.year}`);
+        const units = recentBills.map(b => b.units);
+
+        const ctx = document.getElementById('billGraph').getContext('2d');
+        if (graphChart) { graphChart.destroy(); } 
+
+        graphChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Units',
+                    data: units,
+                    backgroundColor: '#888888',
+                    borderColor: '#555',
+                    borderWidth: 1,
+                    barPercentage: 0.65
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { left: 10, right: 20 } },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'start', align: 'right', color: 'black', font: { weight: 'bold', size: 11 },
+                        formatter: Math.round, offset: 5
+                    }
+                },
+                scales: {
+                    x: {
+                        position: 'top', min: 0, max: 160,
+                        ticks: { stepSize: 50, font: { size: 11, weight: 'bold' } },
+                        grid: { color: '#999', borderDash: [4, 4], drawTicks: false }
+                    },
+                    y: { grid: { display: false }, ticks: { font: { size: 12, weight: 'bold' }, color: '#333' } }
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 4. Payment & Late Fee (₹20)
+    // ==========================================
+    function fetchPaymentDetails() {
+        const month = document.getElementById('payMonth').value;
+        const year = document.getElementById('payYear').value;
+        const payMsg = document.getElementById('payStatusMsg');
+        const payAmountInput = document.getElementById('payAmount');
+        const lateFeeWarning = document.getElementById('lateFeeWarning');
+        
+        document.getElementById('paymentSuccessMsg').style.display = 'none';
+        lateFeeWarning.style.display = 'none';
+
+        if(!month || !year) {
+            payAmountInput.value = "0.00";
+            payMsg.innerText = "";
+            return;
+        }
+
+        const foundBill = billsData.find(b => b.month === month && b.year === year);
+
+        if(foundBill) {
+            if(foundBill.payDate) {
+                payMsg.style.color = "green";
+                payMsg.innerText = "This bill is already Paid.";
+                payAmountInput.value = "0.00";
+            } else {
+                const isLate = todayStr > foundBill.dueDate;
+                
+                if (isLate) {
+                    const finalAmount = parseFloat(foundBill.total) + 20;
+                    payAmountInput.value = finalAmount.toFixed(2);
+                    lateFeeWarning.style.display = 'block';
+                    lateFeeWarning.innerHTML = `⚠️ Due Date (${formatDate(foundBill.dueDate)}) निकल चुकी है। ₹20 लेट फीस (Late Fee) जोड़ी गई है।`;
+                    payMsg.innerText = "";
+                } else {
+                    payAmountInput.value = foundBill.total;
+                    payMsg.style.color = "blue";
+                    payMsg.innerText = `Bill found! Pay before ${formatDate(foundBill.dueDate)} to avoid penalty.`;
+                }
+            }
+        } else {
+            payMsg.style.color = "red";
+            payMsg.innerText = "No bill found. Please search and generate it first.";
+            payAmountInput.value = "0.00";
+        }
+    }
+
+    function processPayment() {
+        const month = document.getElementById('payMonth').value;
+        const year = document.getElementById('payYear').value;
+        const amount = document.getElementById('payAmount').value;
+        const payMsg = document.getElementById('payStatusMsg');
+        const successMsgDiv = document.getElementById('paymentSuccessMsg');
+        const lateFeeWarning = document.getElementById('lateFeeWarning');
+
+        if(!month || !year || amount === "0.00") {
+            alert("Please select a valid Month and Year with an unpaid bill.");
+            return;
+        }
+
+        const billIndex = billsData.findIndex(b => b.month === month && b.year === year);
+        if(billIndex === -1) return;
+
+        const payBtn = document.getElementById('payBtn');
+        payBtn.innerHTML = "⏳ Processing...";
+        payBtn.disabled = true;
+
+        setTimeout(() => {
+            // Mark the SAME bill as paid
+            billsData[billIndex].payDate = todayStr; 
+            if(!billsData[billIndex].history) billsData[billIndex].history = [];
+            billsData[billIndex].history.push({ date: todayStr, amount: amount });
+            
+            localStorage.setItem('mahaStrictPastBills', JSON.stringify(billsData));
+
+            // Reset Form
+            document.getElementById('payAmount').value = "0.00";
+            document.getElementById('payMonth').value = "";
+            document.getElementById('payYear').value = "";
+            payMsg.innerText = "";
+            lateFeeWarning.style.display = 'none';
+            payBtn.innerHTML = "Pay Now";
+            payBtn.disabled = false;
+
+            // Show Success Message
+            successMsgDiv.style.display = 'block';
+            successMsgDiv.innerHTML = `✅ Payment of ₹${amount} Successful! Bill marked as Paid.`;
+
+            // Show the SAME (now paid) bill
+            renderGraph();
+            
+            // Set dropdowns to the paid month
+            document.getElementById('searchYear').value = year;
+            updateMonths('searchYear', 'searchMonth'); 
+            document.getElementById('searchMonth').value = month;
+            
+            populateBillUI(billsData[billIndex]);
+            document.getElementById('billPaper').style.display = 'block';
+            document.getElementById('billPaper').scrollIntoView({ behavior: 'smooth' });
+
+            setTimeout(() => {
+                successMsgDiv.style.display = 'none';
+            }, 6000);
+
+        }, 1500); 
+    }
+</script>
+</body>
+</html>
